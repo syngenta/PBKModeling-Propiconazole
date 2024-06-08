@@ -348,12 +348,12 @@ df <- ode(y = initState,
 df  <- as.data.frame(df)
 colnames(df)[1] <- "Time"
 
-#write.csv(df, paste('C:/Users/s1036120/OneDrive - Syngenta/HTTK/Mammals/PPZ/Plots/', species, '_oral_', oral_mg.kg, 'mgkg.csv', sep = ''), row.names = FALSE)
+#write.csv(df, paste('C:/XXX/Mammals/PPZ/Plots/', species, '_oral_', oral_mg.kg, 'mgkg.csv', sep = ''), row.names = FALSE)
 
 ####### Plot (oral)
 # Theme Reference: https://ggplot2.tidyverse.org/reference/ggtheme.html
 # 2017 in vivo data' 1, 10, 100 mg/kg oral; 
-path     <- "C:/Users/s1036120/OneDrive - Syngenta/AI/Propiconazole/PBK_Modeling/Reference compounds/Difenoconazole/Figures/DIFEN.xlsx"
+path     <- "C:/XXX/Propiconazole/PBK_Modeling/Reference compounds/Difenoconazole/Figures/DIFEN.xlsx"
 obs      <- read_xlsx(path,  sheet = 'Sheet1')
 obs$Time_h    <- as.numeric(obs$Time_h)
 obs$Conc_ugl  <- as.numeric(obs$Conc_ugl)
@@ -389,7 +389,7 @@ AUC24    # 15.8 umol*L/h
 dvalue  <- oral_mg.kg
 dose    <- paste(oral_mg.kg, 'mgkg', sep = '')
 
-coeff <- 1/250#1/80#1/4#1/120#1/4#1/40#1/40
+coeff <- 1/250                          #1/80#1/4#1/120#1/4#1/40#1/40
 
 ggplot() + 
   geom_line (data =df, aes(Time/24, C_blood_parent, color = 'Predicted blood conc'),  lwd=0.7) + 
