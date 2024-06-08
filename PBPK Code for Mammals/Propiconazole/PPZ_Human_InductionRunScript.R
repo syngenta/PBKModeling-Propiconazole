@@ -41,8 +41,8 @@ rm(list = ls())
 
 species                 <- 'Human'  
 
-source(paste("C:/XXX/General_code/Maternal_8compt_InductionModel_Parent.R"))
-source(paste("C:/XXX/General_code/Species_PhyData.R"))
+source(paste("C:/Users/s1036120/OneDrive - Syngenta/HTTK/Mammals/General_code/Maternal_8compt_InductionModel_Parent.R"))
+source(paste("C:/Users/s1036120/OneDrive - Syngenta/HTTK/Mammals/General_code/Species_PhyData.R"))
 
 MPPGL      <- MPPGL_human
 MPPGGI     <- MPPGGI_human
@@ -52,10 +52,13 @@ BW_mouse    <- 0.02
 BW_rat      <- 0.25
 BW_human    <- 70
 
+Qrest       ==  Qcardiac - Qliver - Qgut - Qadipose - Qbrain 
+
+
 #======================================================================================================
 #                          Compound physico-chemical & in vitro properties                            #
 #======================================================================================================
-####################### Parent ######################
+####################### Parent (Table 1)    Acibenzolar ######################
 # physico-chemical properties   
 Compound_name_parent    <- 'Propiconazole (PPZ)'
 Compound_type_parent    <- 'base'
@@ -66,21 +69,24 @@ pKa_a_parent            <-  'None'                                       # very 
 pKa_b_parent            <-  1.09                                         # pka accept (base); Teb?H+ -> Teb + H+ 
 
 # in vitro properties   -
-fub_parent              <-  0.05                                         # Unbound fraction in plasma; measured in sed
-Rblood2plasma_parent    <-  0.597                                        # if not available, place "None" here.
-Papp_parent             <-  40.8                                         # unit: 10-6 cm/s                 
+fub_parent              <-  0.05 #0.0955                                         # Unbound fraction in plasma; measured in sed
+Rblood2plasma_parent    <-  0.597                                          #  if not available, place "None" here.
+Papp_parent             <-  40.8                                           # unit: 10-6 cm/s                 
+#a <- chem.physical_and_invitro.data[chem.physical_and_invitro.data$CAS == '60207-90-1',]
 
 BW_scaledfrom                    <- BW_rat
 # in vitro metabolic-related properties   
-Vmax_unit                        <- 'umol/h/kg bw'                       # 'umol/h/kg bw' or 'none'
+Vmax_unit                        <- 'umol/h/kg bw'                         # 'umol/h/kg bw' or 'none'
 # liver
 type_hep_clearance               <- 'liver'
-incubation_hep_parent            <- 'microsome'                                     # for rat metabolic stability test (hepatic)
-Km_hep_parent                    <- 4.6                                             # unit: uM (umol/L)
-Vmax_hep_parent                  <- 15.5 * Km_hep_parent #13 * Km_hep_parent        # umol/h/kg bw (59.8)
+incubation_hep_parent            <- 'microsome'                            # for rat metabolic stability test (hepatic)
+# 13 L/h/kg Bw (216 mL/min/kg)
+Km_hep_parent                    <- 4.6                                    # unit: uM (umol/L)
+Vmax_hep_parent                  <- 15.5 * Km_hep_parent                   # umol/h/kg bw (59.8)
 
-df_tissue_human                  <- tissue.data[which(tissue.data$Species == 'Human'),]
-Vliver_human                     <- subset(df_tissue_human , variable == "Vol (L/kg)" &
+
+df_tissue_human                     <- tissue.data[which(tissue.data$Species == 'Human'),]
+Vliver_human                        <- subset(df_tissue_human , variable == "Vol (L/kg)" &
                                              tolower(Tissue) == 'liver')$value
 
 parent_hep_conc_metabolic        <- 0.5                                   # 0.5 mg/ml protein; Shen et al. 2013
@@ -102,7 +108,7 @@ Clint_plasma_parent              <-  1e6                                  # half
 fu_plasma_parent                 <- 'None'
 
 # Induction related parapeters
-EC50         <- 6.26                   # uM 
+EC50         <- 6.26                   # uM mouse
 Emax         <- 5.62                   # fold
 E0           <- 1 
 fmCYP        <- 0.65                   # CYP3A4
@@ -141,15 +147,23 @@ chem.physical_and_invitro.data <- add_chemtable(my.new.data,
 ####################################################################### 
 ###                    partition coefficients                       ###  to unbound plasma; 12 for rat, 14 for human
 #######################################################################
-source(paste("C:/XXX/General_code/Maternal_DM_Parent.R"))
+source(paste("C:/Users/s1036120/OneDrive - Syngenta/HTTK/Mammals/General_code/Maternal_DM_Parent.R"))
+# Validation only
+tissuelist <- list(liver=c("liver"),lung=c("lung"),gut=c("gut"), brain=c("brain"), adipose=c("adipose"),
+                    muscle.bone=c('bone', 'heart', 'skin', 'spleen', 'muscle', 'rest', "kidney"))
+round(lump_tissues(PC_parent,tissuelist=tissuelist,species = species)$Kmuscle.bone2pu,1)  == round(Krest2pu_parent, 1) 
  
 ##################################################################
 ###                     absorption (1/h)                       ###  
 ##################################################################
-
+###                 Acibenzolar                   ###
+# calculation of Ka using caco2 permeability was not used as experimentally fitting values are available
+# Ka was obtained by fitting to the observed blood concentration-time data for acibenzolar-acid after oral dosing (1, 10 and 100 mg/kg acibenzolar)
+# as acibenzolar was undetectable in blood at these doses.
+# Reference: Acibenzolar manuscript equation 1
 calc_ka     <- function(dose.mg.kg, Papp){
   if(is.numeric(Papp)){
-    Peff_human  <- 0.4926*log10(Papp) - 0.1454                   # 1e-4 cm/s; Papp in the unit of 1e-6 cm/s
+    Peff_human  <- 10^(0.4926*log10(Papp) - 0.1454)                  # 1e-4 cm/s; Papp in the unit of 1e-6 cm/s
     ka          <- 2 * Peff_human / R_human / 1e4 * 3600
   }else{
     ka_scaledfrom   <- 2
@@ -193,7 +207,7 @@ Times         <- seq(StartTime, StopTime, dt)
 
 #           Dose regimen            #
 # oral dose 
-oral_mg.kg        <- 29    #400#150#24.7#400#150#24.7                  # mg/kg
+oral_mg.kg        <- 1#400#150#29#400#150#24.7#400#150#24.7                  # mg/kg
 oral_input        <- oral_mg.kg  * 1000 / MW_parent   # mg/kg -> umol/kg bw
 
 # iv dose 
@@ -201,7 +215,7 @@ iv_mg.kg          <- 1                               #
 iv_input          <- iv_mg.kg  * 1000  / MW_parent   # mg/kg -> umol/kg bw
 
 # infusion dose
-Infusion_mg.kg    <- 0                                            
+Infusion_mg.kg    <- 0                                            # 1, 10 or 100; 2017 in vivo rat study
 Infusion_input    <- Infusion_mg.kg  * 1000 / MW_parent           # mg/kg -> ug/kg bw
 CTinf             <- 1                                            # 1 h infusion time
 CRATE             <- Infusion_input/CTinf                         # ug/kg bw /h
@@ -211,17 +225,17 @@ CRATEinf          <- c(CRATE,0,0)
 Cstep.doseinf     <- approxfun(CTIMEinf, CRATEinf, method = "const")
 
 # absorption calculation
-ka                <- calc_ka(dose.mg.kg = oral_mg.kg, Papp =  Papp_parent)      # h-1
-kt                <- kt_human                                                   # h-1
+ka                <- 1                                             # h-1
+kt                <- kt_human                                                 
 
-ndays         <- 0   #2#13
-ndays_single  <- 13  #2#13
+ndays         <- 2    #13#0#2#13
+ndays_single  <- 13   #2#13
 Dose_events_oral   <- data.frame(var = "Agutlumen_parent",           # Agutlumen_parent; Aven_parent
                                  time = seq(from = 0, to = ndays * 24, by = 24),
                                  value = rep(oral_input,ndays+1),
                                  method = "add")
 
-Dose_events_iv      <- data.frame(var = "Aven_parent",           # Agutlumen_parent; Aven_parent
+Dose_events_iv      <- data.frame(var = "Aven_parent",              # Agutlumen_parent; Aven_parent
                                   time = 0,
                                   value = iv_input,
                                   method = "add")
@@ -246,7 +260,7 @@ parms <- c( Oral_mg.kg                = oral_mg.kg,
             ka                        = ka,
             kt                        = kt,
             
-            EC50                      = EC50,                  # uM
+            EC50                      = EC50,              # uM
             Emax                      = Emax,                  # fold
             E0                        = E0, 
             kdeg                      = kdeg,
@@ -258,24 +272,25 @@ parms <- c( Oral_mg.kg                = oral_mg.kg,
             Kbrain2pu_parent          = Kbrain2pu_parent,
             Kadipose2pu_parent        = Kadipose2pu_parent,
             Krest2pu_parent           = Krest2pu_parent ,     
-           
+ 
+            
             #incubation_hep_parent     = incubation_hep_parent,                                    
             Vmax_hep_parent            = Vmax_hep_parent,                                      
             Km_hep_parent              = Km_hep_parent,                                         
             Vmax_int_parent            = Vmax_int_parent ,                                           
-            Km_int_parent              = Km_int_parent,                                          
-            parent_hep_conc_metabolic  = parent_hep_conc_metabolic,                             
-            fuinc_hep_parent           = fuinc_hep_parent,                                     
+            Km_int_parent              = Km_int_parent,                                             # unit: uM (umol/L)
+            parent_hep_conc_metabolic  = parent_hep_conc_metabolic,                            
+            fuinc_hep_parent           = fuinc_hep_parent,                              
             parent_hep_conc_binding    = parent_hep_conc_binding,   
             parent_int_mic_conc_metabolic   = parent_int_mic_conc_metabolic,                        
-            fuinc_int_parent                = fuinc_int_parent,                                      
+            fuinc_int_parent           = fuinc_int_parent,                                      
             parent_int_mic_conc_binding     = parent_int_mic_conc_binding,      
-            #incubation_plasma_parent   = incubation_plasma_parent,       
+            #incubation_plasma_parent  = incubation_plasma_parent,       
             #Clint_plasma_parent        = Clint_plasma_parent,  
             
             CLR                       = CLR,
 
-            # Parametes for flow 
+                        # Parametes for flow 
             Qcardiac                  = Qcardiac, 
             Qgut                      = Qgut,
             Qkidney                   = Qkidney,
@@ -333,11 +348,12 @@ df <- ode(y = initState,
 df  <- as.data.frame(df)
 colnames(df)[1] <- "Time"
 
-#write.csv(df, paste('C:/XXX/Plots/', species, '_oral_', oral_mg.kg, 'mgkg.csv', sep = ''), row.names = FALSE)
+#write.csv(df, paste('C:/Users/s1036120/OneDrive - Syngenta/HTTK/Mammals/PPZ/Plots/', species, '_oral_', oral_mg.kg, 'mgkg.csv', sep = ''), row.names = FALSE)
 
 ####### Plot (oral)
 # Theme Reference: https://ggplot2.tidyverse.org/reference/ggtheme.html
-path     <- "C:/XXX/Difenoconazole/Figures/DIFEN.xlsx"
+# 2017 in vivo data' 1, 10, 100 mg/kg oral; 
+path     <- "C:/Users/s1036120/OneDrive - Syngenta/AI/Propiconazole/PBK_Modeling/Reference compounds/Difenoconazole/Figures/DIFEN.xlsx"
 obs      <- read_xlsx(path,  sheet = 'Sheet1')
 obs$Time_h    <- as.numeric(obs$Time_h)
 obs$Conc_ugl  <- as.numeric(obs$Conc_ugl)
@@ -355,6 +371,11 @@ ggplot() +
   xlab("Time (h)") + theme(text = element_text(size = 20))  + theme_bw(base_size = 14)
 
 ggplot() +
+  geom_line (data = df, aes(Time, Mass_parent_out/oral_input*100), col="#00AFBB", lwd=2) + ylab("Mass balance (umol)") +
+  xlab("Time (h)") + theme(text = element_text(size = 20))  + theme_bw(base_size = 14)+ xlim(0, 10)
+
+
+ggplot() +
   geom_line (data = df, aes(Time,C_blood_parent), col="#00AFBB", lwd=2) + ylab("Mass balance (umol)") +
   xlab("Time (h)") + theme(text = element_text(size = 20)) + theme_bw(base_size = 14) + xlim(0, 48)
 
@@ -368,7 +389,7 @@ AUC24    # 15.8 umol*L/h
 dvalue  <- oral_mg.kg
 dose    <- paste(oral_mg.kg, 'mgkg', sep = '')
 
-coeff <- 1/4            #1/120#1/4#1/40#1/40
+coeff <- 1/250#1/80#1/4#1/120#1/4#1/40#1/40
 
 ggplot() + 
   geom_line (data =df, aes(Time/24, C_blood_parent, color = 'Predicted blood conc'),  lwd=0.7) + 
@@ -376,7 +397,7 @@ ggplot() +
   geom_line(data = df, aes(x = Time/24, y = (Eliver /coeff), color = "Predicted CYP3A4 conc"), lwd=0.8) +
    ylab(expression("Blood Concentration ("*mu*"mol/L)")) + 
   scale_y_continuous(sec.axis = sec_axis(~ . * coeff, name = "Relative CYP3A4 Concentration [fold]")) + 
-  xlab("Time (d)") + theme(text = element_text(size = 20)) + xlim(0, 10) + theme_bw(base_size = 12)+
+  xlab("Time (d)") + theme(text = element_text(size = 20)) + xlim(0, 15) + theme_bw(base_size = 12)+
   # legend
   scale_color_manual(name = NULL,
                      values = c('#276DC2', "#228C22"),
@@ -395,7 +416,7 @@ ggplot() +
     subtitle = paste("Propiconazole (PPZ)")) +
   theme(plot.title = element_text(size=12), plot.subtitle = element_text(size=10))
 
-ggsave(paste('C:/XXX/Plots/HumanwCYP_', dose, '_oral_1007.tiff', sep = ''), width = 6.3, height = 4.5, dpi = 600, compression = 'lzw')
+ggsave(paste('C:/XXX/Mammals/PPZ/Plots/HumanwCYP_', dose, '_oral_0509.tiff', sep = ''), width = 6.3, height = 4.5, dpi = 600, compression = 'lzw')
 
 
 
@@ -404,7 +425,7 @@ ggsave(paste('C:/XXX/Plots/HumanwCYP_', dose, '_oral_1007.tiff', sep = ''), widt
 #==========================================================================================================
 # Rat AUC24 is 14.75891 umol/L/h based on 30 mg/kg/d repeated dose
 # 14 days of exposure; 3 meals taken at 7 am, 12 pm and 6pm (0, 5, 11 hr)
-days          <- 10#14
+days          <- 20#10#14
 Time_max      <- days * 24                             # h
 StartTime     <- 0                                     # Time_min
 StopTime      <- 40*24
@@ -412,7 +433,7 @@ dt            <- 0.1
 Times         <- seq(StartTime, StopTime, dt)
 
 # dose
-Oral_mg_kg         <- 66.8                          # mg/kg BW/d
+Oral_mg_kg         <- 37.9#19.8 #66.8                          # mg/kg BW/d
 Oral_input         <- Oral_mg_kg * 1000 / MW_parent            # mg/kg -> ug/kg bw
 
 # # dose pattern 47/91 Sitovition report
@@ -429,7 +450,7 @@ for (i in 1:(days-1)){
 zz             <- data.frame(zz)
 time           <- unlist(zz)
 
-value          <- c(Oral_input/3, Oral_input/3, Oral_input/3)           
+value          <- c(Oral_input/3, Oral_input/3, Oral_input/3)            # P47/91 sitovition report; 3 meals taken at 7 am, 12 pm and 6pm (0, 5, 11 hr)
 Dose_events    <- data.frame(var,
                              time,
                              value,
@@ -454,13 +475,13 @@ ggplot() +
 
 # AUC of blood (chronic, single oral dose at  mg/kg)
 AUC24   <- dfC[round(dfC$Time,1) == 240,]$AUC_Cblood_parent - dfC[round(dfC$Time,1) == 216,]$AUC_Cblood_parent
-AUC24    # 11.6761 umol*L/h (45.6 mg/kg)
+AUC24    # 11.6761 umol*L/h (45.6 mg/kg)   # 5.010958
 
 #s
 dvalue  <- Oral_mg_kg
 dose    <- paste(oral_mg.kg, 'mgkg', sep = '')
 
-coeff <- 1/3#1/40
+coeff <- 1#1/3#1/40
 
 ggplot() + 
   geom_line (data =dfC, aes(Time/24, C_blood_parent, color = 'Predicted blood conc'),  lwd=0.4) + 
@@ -468,7 +489,7 @@ ggplot() +
   geom_line(data = dfC, aes(x = Time/24, y = (Eliver /coeff), color = "Predicted CYP3A4 conc"), lwd=0.6) +
   ylab(expression("Blood Concentration ("*mu*"mol/L)")) + 
   scale_y_continuous(sec.axis = sec_axis(~ . * coeff, name = "Relative CYP3A4 Concentration [fold]")) + 
-  xlab("Time (d)") + theme(text = element_text(size = 20)) + xlim(0, 22) + theme_bw(base_size = 12)+
+  xlab("Time (d)") + theme(text = element_text(size = 20)) + xlim(0, 15) + theme_bw(base_size = 12)+
   # legend
   scale_color_manual(name = NULL,
                      values = c('#276DC2', "#228C22"),
@@ -476,7 +497,8 @@ ggplot() +
                      breaks=c("Predicted blood conc", "Predicted CYP3A4 conc")) +
   scale_shape_manual(name=NULL, values=c(16)) +
   scale_linetype_manual(name = NULL,values='solid')+ guides(color = guide_legend(override.aes = list(shape = 16)))+
-  theme(legend.position = c(0.8, 0.9),
+  theme(#legend.position = c(0.8, 0.9),
+        legend.position = c(0.8, 0.78),
         legend.background = element_rect(fill="white",
                                          size=0.5, linetype="solid",
                                          colour ="white"),
@@ -488,5 +510,5 @@ ggplot() +
   theme(plot.title = element_text(size=12), plot.subtitle = element_text(size=10))
 
 
-ggsave(paste('C:/XXX/Plots/HumanwCYP_', Oral_mg_kg, 'mgkg_oral_0103.tiff', sep = ''), width = 6.3, height = 4.5, dpi = 600, compression = 'lzw')
+ggsave(paste('C:/XXX/Mammals/PPZ/Plots/HumanwCYP_', Oral_mg_kg, 'mgkg_oral_0405.tiff', sep = ''), width = 6.3, height = 4.5, dpi = 600, compression = 'lzw')
 
