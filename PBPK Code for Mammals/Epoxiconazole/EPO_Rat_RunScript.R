@@ -17,6 +17,10 @@ library(httk)
 library(deSolve)
 library(pksensi)
 library(ggplot2)
+# make sure HHTK is the latest version
+#update.packages('httk') 
+packageVersion("httk")
+
 
 #==========================================================================================
 #                                         Start                                           #
@@ -33,16 +37,20 @@ library(ggplot2)
 
 # Clean the environment
 rm(list = ls())
-dev.off()
+#dev.off()
 
 species                 <- 'Rat'  
 
-source(paste("C:/XXX/General_code/Maternal_8compt_Model_Parent.R"))
-source(paste("C:/XXX/General_code/Species_PhyData.R"))
+source(paste("C:/XXX/Mammals/General_code/Maternal_8compt_Model_Parent.R"))
+source(paste("C:/XXX/Mammals/General_code/Species_PhyData.R"))
 
 MPPGL      <- MPPGL_rat
 MPPGGI     <- MPPGGI_rat
 
+# check: Qrest + Qliver + Qgut + Qadipose + Qbrain - Qcardiac
+#Qrest      == Qadipose + Qbone + Qbrain + Qheart + Qskin + Qspleen + Qmuscle + Qrest_httk           # L/h/kg BW; DO NOT USE!
+#Qrest      == Qcardiac - Qliver - Qkidney - Qgut - Qlung - Qadipose - Qbrain                        # critical equation to ensure flow balance !!!
+Qrest       ==  Qcardiac - Qliver - Qgut - Qadipose - Qbrain 
 BW_rat      <- 0.25
 
 #======================================================================================================
@@ -60,15 +68,16 @@ pKa_b_parent            <-  2.26                                         # pka a
 
 # in vitro properties   -
 fub_parent              <-  0.06 #0.04                                   # Unbound fraction in plasma; measured in sed
-Rblood2plasma_parent    <-  'None'                                       # if not available, place "None" here.
+Rblood2plasma_parent    <-  'None'                                       # Table 1; assumed; if not available, place "None" here.
 Papp_parent             <-  36.1                                         # unit: 10-6 cm/s                 
+#a <- chem.physical_and_invitro.data[chem.physical_and_invitro.data$CAS == '66246-88-6',]
 # in vitro metabolic-related properties   
-Vmax_unit                        <- 'none'                             # 'umol/h/kg bw' or 'none'
+Vmax_unit                        <- 'none'                        # 'umol/h/kg bw' or 'none'
 
 type_hep_clearance               <- 'liver'
 incubation_hep_parent            <- 'microsome'                           # for rat metabolic stability test (hepatic)
-Vmax_hep_parent                  <- 0.08 * 60 / 10.67 * (0.55/2)          # unit: umol/min/mg protein; rat  -> umol/h/mg protein
-Km_hep_parent                    <- 12                                    # unit: uM (umol/L)
+Vmax_hep_parent                  <- 0.08 * 60 / 10.67 * (0.55/2)                            # unit: umol/min/mg protein; rat  -> umol/h/mg protein
+Km_hep_parent                    <- 13.5#12                                    # unit: uM (umol/L)
 parent_hep_conc_metabolic        <- 1                                     # 1 mg/ml protein; Shen et al. 2013
 fuinc_hep_parent                 <- 9999                                  # 
 parent_hep_conc_binding          <- 9999
@@ -77,10 +86,10 @@ Clint_ori_hep_parent             <- 9999                                  # uL/h
 # intestine
 type_int_clearance               <- 'intestine'
 incubation_int_parent            <- 'microsome'                           # for rat intestinal stability test
-Vmax_int_parent                  <- Vmax_hep_parent / MPPGL_rat * MPPGGI_rat                        
+Vmax_int_parent                  <- Vmax_hep_parent / MPPGL_rat * MPPGGI_rat                                     # unit: nmol/min/mg protein; Table 1 -->   umol/h/mg protein; Intestinal metabolism determined at 50 ug/mL Frost 2017
 Km_int_parent                    <- 12                                    # unit: uM (umol/L)
 parent_int_mic_conc_metabolic    <- 50                                    # Intestinal metabolism determined at 50 ug/mL Frost 2017
-fuinc_int_parent                 <- 9999                                  
+fuinc_int_parent                 <- 9999                                     # Measured at 1 ug/mL microsome binding experiment; Frost 2017 (16/90)
 parent_int_mic_conc_binding      <- 9999   
 
 incubation_plasma_parent         <- 'plasma'   
@@ -122,7 +131,7 @@ chem.physical_and_invitro.data <- add_chemtable(my.new.data,
 ###                    partition coefficients                       ###  to unbound plasma; 12 for rat, 14 for human
 #######################################################################
 ## predicting the tissue to unbound plasma partition coefficients for the tissues contained in the tissue.data table 
-source(paste("C:/XXX/Mammals/General_code/Maternal_DM_Parent.R"))
+source(paste("C:/XXX/HTTK/Mammals/General_code/Maternal_DM_Parent.R"))
 
 # Validation only
 tissuelist <- list(liver=c("liver"),lung=c("lung"),gut=c("gut"), brain=c("brain"), adipose=c("adipose"),
@@ -134,6 +143,11 @@ round(lump_tissues(PC_parent,tissuelist=tissuelist,species = species)$Kmuscle.bo
 ##################################################################
 ###                     absorption (1/h)                       ###  
 ##################################################################
+###                 Acibenzolar                   ###
+# calculation of Ka using caco2 permeability was not used as experimentally fitting values are available
+# Ka was obtained by fitting to the observed blood concentration-time data for acibenzolar-acid after oral dosing (1, 10 and 100 mg/kg acibenzolar)
+# as acibenzolar was undetectable in blood at these doses.
+# Reference: Acibenzolar manuscript equation 1
 calc_ka     <- function(dose.mg.kg, Papp){
   
   if(is.numeric(Papp)){
@@ -144,17 +158,13 @@ calc_ka     <- function(dose.mg.kg, Papp){
     #kt          <- 0.68                                        # Transit rate constant (1/h) 0.68'
     
   }else{
-    ka    <- 2 #0.832 * dose.mg.kg^(-0.301)                      # dose unit: mg/kg; subject to change
-    #ka_scaledfrom   <- exp(0.9930) * dose.mg.kg^(-0.3667)
-    #ka              <- ka_scaledfrom  * (BW/BW_scaledfrom)^(-0.25)                       # eqaution A11 in appendix
+    ka    <- 2                     # dose unit: mg/kg; subject to change
   }
   
   return(ka)                                                # unit: 1/h
 }
 # test: ka         <- calc_ka(dose.mg.kg = 10, Papp_parent)
 BW_scaledfrom <- BW_mouse
-
-# Reference: Acibenzolar manuscript
 fa        <- 1                                           # absorption fraction
 
 
@@ -196,7 +206,7 @@ Times         <- seq(StartTime, StopTime, dt)
 
 #           Dose regimen: Oral         #
 # dose 
-oral_mg.kg        <- 5                   # mg
+oral_mg.kg        <- 50#5#50                    # mg
 oral_input        <- oral_mg.kg  * 1000 / MW_parent   # mg/kg -> umol/kg bw
 
 Infusion_mg.kg    <- 0                                            # 1, 10 or 100; 2017 in vivo rat study
@@ -236,17 +246,17 @@ parms <- c( Oral_mg.kg                = oral_mg.kg,
             Krest2pu_parent           = Krest2pu_parent ,     
             
             
-            #incubation_hep_parent     = incubation_hep_parent,                                    
-            Vmax_hep_parent            = Vmax_hep_parent,                                       
-            Km_hep_parent              = Km_hep_parent,                                         
-            parent_hep_conc_metabolic  = parent_hep_conc_metabolic,                  
-            fuinc_hep_parent           = fuinc_hep_parent,                                      
+            #incubation_hep_parent     = incubation_hep_parent,                                     # for rat metabolic stability test (hepatic)
+            Vmax_hep_parent            = Vmax_hep_parent,                                       # unit: nmol/min/10^6 cells; Table 1 -->   umol/h/10^6 cellS; determined at 1000 cells/mL; page 13/90 of frost 2017
+            Km_hep_parent              = Km_hep_parent,                                         # unit: uM (umol/L)
+            parent_hep_conc_metabolic  = parent_hep_conc_metabolic,                  # hepatocyte metabolic experiment determined at 1000 cells/mL; page 13/90 of frost 2017
+            fuinc_hep_parent           = fuinc_hep_parent,                                      # measured at 1000 cells/mL binding experiment
             parent_hep_conc_binding    = parent_hep_conc_binding,   
-            #incubation_int_parent     = incubation_int_parent,                                     
-            Vmax_int_parent           = Vmax_int_parent,                                           
-            Km_int_parent             = Km_int_parent,                                           
-            parent_int_mic_conc_metabolic     = parent_int_mic_conc_metabolic,                     
-            fuinc_int_parent          = fuinc_int_parent,                                        
+            #incubation_int_parent     = incubation_int_parent,                                     # for rat intestinal stability test
+            Vmax_int_parent           = Vmax_int_parent,                                           # unit: nmol/min/mg protein; Table 1 -->   umol/h/mg protein; Intestinal metabolism determined at 50 ug/mL Frost 2017
+            Km_int_parent             = Km_int_parent,                                             # unit: uM (umol/L)
+            parent_int_mic_conc_metabolic     = parent_int_mic_conc_metabolic,                     # Intestinal metabolism determined at 50 ug/mL Frost 2017
+            fuinc_int_parent          = fuinc_int_parent,                                          # Measured at 1 ug/mL binding experiment; Frost 2017
             parent_int_mic_conc_binding       = parent_int_mic_conc_binding,      
             #incubation_plasma_parent  = incubation_plasma_parent,       
             Clint_plasma_parent       = Clint_plasma_parent,  
@@ -348,13 +358,12 @@ ggplot() +
 # Concentration
 # https://stackoverflow.com/questions/54976769/how-to-use-ggplot2-legend-to-denote-different-geoms
 ggplot() +
-  geom_line (data = df, aes(Time, C_plasma_parent,linetype = 'Predicted'), col="#276DC2", lwd=1.5) + 
+  geom_line (data = df, aes(Time, C_plasma_parent,linetype = 'Predicted'), col="#276DC2", lwd=1) + 
   ylab(expression("Plasma Concentration ("*mu*"mol/L)")) +
-  #geom_point(data = obs_plasma,aes(Time_h, Conc_uM, color = "Exp."),size=2)+   #  colour = "#FC4E07",
   geom_point(data = obs_epoxi_50,aes(Time_h, conc_umolL, color = "Exp."),size=2)+
   xlab("Time (h)") + theme(text = element_text(size = 20)) + xlim(0, 24) + theme_bw(base_size = 12)+
   # legend
-  scale_color_manual(name = NULL, values = c('#d8923d', '#5e5e5e')) +
+  scale_color_manual(name = NULL, values = c('#d8923d')) +     # , '#5e5e5e'
   scale_linetype_manual(name = NULL,values='solid')+
   theme(legend.position = c(0.8, 0.85),
         legend.background = element_rect(fill="white",
@@ -366,5 +375,9 @@ ggplot() +
     label = paste("Rat [oral dose of",  oral_mg.kg ,"mg/kg bw]"),
     subtitle = paste("Epoxiconazole (EPX)")) +
   theme(plot.title = element_text(size=12), plot.subtitle = element_text(size=10))
-ggsave(paste('C:/XXX/Epoxiconazole/Results/Rat_', oral_mg.kg,'mgkg_oral_0114.tiff'), width = 5, height = 4, dpi = 600, compression = 'lzw')
+ggsave(paste('C:/XXX/Propiconazole/PBK_Modeling/Reference compounds/Epoxiconazole/Results/Rat_', oral_mg.kg,'mgkg_oral_0114.tiff'), width = 5, height = 4, dpi = 600, compression = 'lzw')
+
+
+
+
 
