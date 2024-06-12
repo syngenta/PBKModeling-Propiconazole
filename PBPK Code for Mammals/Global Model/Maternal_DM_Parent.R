@@ -17,7 +17,9 @@ library(httk)
 library(deSolve)
 library(pksensi)
 library(ggplot2)
-
+# make sure HHTK is the latest version
+#update.packages('httk') 
+packageVersion("httk")
 
 
 #===================================================================================================================
@@ -94,7 +96,7 @@ calc_metabolic_clearance  <- function(type_clearance, incubation, fuinc, Vmax_un
   
   if(tolower(type_clearance) == 'liver'){
     
-    if(is.numeric(Vmax)){
+    if(is.numeric(Vmax)& Vmax != 9999){
       if(Vmax_unit == 'umol/h/kg bw'){
         if(incubation == 'scaled'){
           Vmax_scaledfrom   <- Vmax * BW_scaledfrom                                                            # umol/h; volume per unit time
@@ -109,8 +111,8 @@ calc_metabolic_clearance  <- function(type_clearance, incubation, fuinc, Vmax_un
       }
     }else if(is.numeric(Clint_ori)){
       if(incubation == 'scaled'){
-        # # Clint_scaled from is in the unit of h-1
-        Clint_scaledfrom   <- Clint_ori * BW_scaledfrom
+        # # Clint_scaled from is in the unit of L/h
+        Clint_scaledfrom   <- Clint_ori * BW_scaledfrom                                                       # L/h/kg * kg
         Clint              <- Clint_scaledfrom * ((BW / BW_scaledfrom)^0.75) /BW       
       }else{
         # Clint_ori is in the unit of uL/h/million cell
@@ -119,7 +121,7 @@ calc_metabolic_clearance  <- function(type_clearance, incubation, fuinc, Vmax_un
     }
     
   }else if(tolower(type_clearance) == 'intestine'){
-    if(is.numeric(Vmax)){
+    if(is.numeric(Vmax) & Vmax != 9999){
       if(Vmax_unit == 'umol/h/kg bw'){
         if(incubation == 'scaled'){
           Vmax_scaledfrom   <- Vmax * BW_scaledfrom                                                            # umol/h; volume per unit time
@@ -153,3 +155,4 @@ calc_metabolic_clearance  <- function(type_clearance, incubation, fuinc, Vmax_un
 
   
   
+
