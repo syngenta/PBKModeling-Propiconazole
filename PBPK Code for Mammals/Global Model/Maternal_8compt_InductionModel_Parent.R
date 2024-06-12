@@ -17,6 +17,9 @@ library(httk)
 library(deSolve)
 library(pksensi)
 library(ggplot2)
+# make sure HHTK is the latest version
+#update.packages('httk') 
+packageVersion("httk")
 
 
 #===================================================================================================================
@@ -25,7 +28,7 @@ library(ggplot2)
 # General hepatic parameter
 HPGL_human              <-  117.5                           # million cells/g liver; Number of hepacytes per gram liver; Acibenzolar manuscript appendix.
 MPPGL_human             <-  45                              # mg/g;microsomal protein content per gram liver; Acibenzolar manuscript appendix
-MPPGGI_human            <-  3                               # mg/g tissue; microsomal protein content in the GI. # not used: table 2 of TK0648566-01 report
+MPPGGI_human            <-  3                               # mg/g tissue; microsomal protein content in the GI. # not used: table 2 of TK0648566-01 report; Quantifying gut wall metabolism: methodology matters 2017
 
 HPGL_rat                <-  108                             # million cells/g liver; Number of hepacytes per gram liver; Acibenzolar manuscript appendix.
 MPPGL_rat               <-  45                              # mg/g tissue;microsomal protein content per gram liver; Acibenzolar manuscript appendix
@@ -54,7 +57,7 @@ BW_human    <- 70
 # PKNCA : https://cran.r-project.org/web/packages/PKNCA/vignettes/AUC-Calculation-with-PKNCA.html
 # httk  : https://github.com/USEPA/CompTox-ExpoCast-httk/tree/main/httk
 
-# - Target compound : parent, oral gavage dose
+# - Target compound : parent & daughter
 # - Species         : Mammals (Maternal only)
 # - Author          : Yaoxing Wu
 # - Date            : Jun, 2022
@@ -82,17 +85,17 @@ pbpk8cpt <- function(t, state, parameters) {
     ## Clearance
     # hepatic, intestinal and plasma clearance rate L/h/BW for parent compound
     fu_hep_parent                    <- calc_hep_mic_fu(pH                   = pH,
-                                                        media_conc_metabolic = if(parent_hep_conc_metabolic == 9999){parent_hep_conc_metabolic ='none'},  #parent_hep_conc_metabolic,
-                                                        media_conc_binding   = if(parent_hep_conc_binding == 9999){parent_hep_conc_binding ='none'},  #parent_hep_conc_binding, 
-                                                        fuinc_binding        = if(fuinc_hep_parent == 9999){fuinc_hep_parent ='none'},  #fuinc_hep_parent, 
+                                                        media_conc_metabolic = if(parent_hep_conc_metabolic == 9999){parent_hep_conc_metabolic ='none'}else{parent_hep_conc_metabolic},  #parent_hep_conc_metabolic,
+                                                        media_conc_binding   = if(parent_hep_conc_binding == 9999){parent_hep_conc_binding ='none'}else{parent_hep_conc_binding},  #parent_hep_conc_binding, 
+                                                        fuinc_binding        = if(fuinc_hep_parent == 9999){fuinc_hep_parent ='none'}else{fuinc_hep_parent},  #fuinc_hep_parent, 
                                                         Compound_type        = Compound_type_parent, 
                                                         LogP                 = LogP_parent, 
                                                         pKa                  = pKa_a_parent)
     
     fu_int_parent                    <- calc_hep_mic_fu(pH                   = pH, 
-                                                        media_conc_metabolic = if(parent_int_mic_conc_metabolic == 9999){parent_int_mic_conc_metabolic ='none'},
-                                                        media_conc_binding   = if(parent_int_mic_conc_binding == 9999){parent_int_mic_conc_binding ='none'},      #parent_int_mic_conc_binding, 
-                                                        fuinc_binding        = if(fuinc_int_parent == 9999){fuinc_int_parent ='none'},                            #fuinc_hep_parent, 
+                                                        media_conc_metabolic = if(parent_int_mic_conc_metabolic == 9999){parent_int_mic_conc_metabolic ='none'}else{parent_int_mic_conc_metabolic},
+                                                        media_conc_binding   = if(parent_int_mic_conc_binding == 9999){parent_int_mic_conc_binding ='none'}else{parent_int_mic_conc_binding},      #parent_int_mic_conc_binding, 
+                                                        fuinc_binding        = if(fuinc_int_parent == 9999){fuinc_int_parent ='none'}else{fuinc_int_parent},                            #fuinc_hep_parent, 
                                                         Compound_type        = Compound_type_parent, 
                                                         LogP                 = LogP_parent, 
                                                         pKa                  = pKa_a_parent)
@@ -104,7 +107,8 @@ pbpk8cpt <- function(t, state, parameters) {
                                                                  incubation           = incubation_hep_parent, 
                                                                  fuinc                = fu_hep_parent,
                                                                  Vmax_unit            = Vmax_unit,
-                                                                 Vmax = fmCYP * Vmax_hep_parent * Eliver + (1 - fmCYP) * Vmax_hep_parent, Km = Km_hep_parent, 
+                                                                 Vmax = if(Vmax_hep_parent!=9999){fmCYP * Vmax_hep_parent * Eliver + (1 - fmCYP) * Vmax_hep_parent}else{9999}, 
+                                                                 Km = Km_hep_parent, 
                                                                  Clint_ori            = if(Clint_ori_hep_parent==9999){Clint_ori_hep_parent = 'none'}else{Clint_ori_hep_parent},
                                                                  C_tissue             = Cliver_parent, Ktissue2pu = Kliver2pu_parent,
                                                                  tissue_specific_volume = Vliver, 
@@ -114,7 +118,8 @@ pbpk8cpt <- function(t, state, parameters) {
                                                                  incubation           = incubation_int_parent, 
                                                                  fuinc                = fu_hep_parent, 
                                                                  Vmax_unit            = Vmax_unit,
-                                                                 Vmax = Vmax_int_parent * Egut, Km = Km_int_parent, 
+                                                                 Vmax = if(Vmax_int_parent!=9999){Vmax_int_parent * Egut}else{9999}, 
+                                                                 Km = Km_int_parent, 
                                                                  Clint_ori            = "None",
                                                                  C_tissue             = Cgut_parent, Ktissue2pu = Kgut2pu_parent,
                                                                  tissue_specific_volume = Vgut, 
@@ -168,20 +173,21 @@ pbpk8cpt <- function(t, state, parameters) {
     # Venous blood
     dAven_parent         =   RateC + (Qliver + Qgut) * Cliverblood_parent  + Qbrain * Cbrainblood_parent + 
                                 Qadipose * Cadiposeblood_parent + Qrest * Crestblood_parent - Qcardiac * Cven_parent - 
-                                Clint_plasma_parent_invivo * Vven *  Cven_parent - Qgfr_parent * Cven_parent * fub_parent
+                                Clint_plasma_parent_invivo * Vven *  Cven_parent # - Qgfr_parent * Cven_parent * fub_parent
     
     # Lung
     Clungblood_parent    =   Rblood2plasma_parent / (Klung2pu_parent * fub_parent) * Clung_parent
     dAlung_parent        =   Qcardiac * (Cven_parent - Clungblood_parent)
     
     # Artery
-    dAart_parent         =   Qcardiac * (Clungblood_parent - Cart_parent) - Clint_plasma_parent_invivo  * Vart * Cart_parent 
+    dAart_parent         =   Qcardiac * (Clungblood_parent - Cart_parent) - Clint_plasma_parent_invivo  * Vart * Cart_parent -
+                              Qgfr_parent * Cart_parent * fub_parent
     
     # AUC
     dAUC_Cplasma_parent  =  Cven_parent / Rblood2plasma_parent
     dAUC_Cblood_parent   =  Cven_parent
     
-    dAurine_parent       =  Qgfr_parent * Cven_parent * fub_parent 
+    dAurine_parent       =  Qgfr_parent * Cart_parent * fub_parent 
     
     ######################         Mass balance check          #######################
     ## Mass balance of parent
@@ -246,5 +252,8 @@ pbpk8cpt <- function(t, state, parameters) {
 
 
 #-------------------------          End of PBPK modeling equations        --------------------------------  
+
+
+
 
 
