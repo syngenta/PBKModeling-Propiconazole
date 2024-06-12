@@ -57,7 +57,7 @@ BW_human    <- 70
 # PKNCA : https://cran.r-project.org/web/packages/PKNCA/vignettes/AUC-Calculation-with-PKNCA.html
 # httk  : https://github.com/USEPA/CompTox-ExpoCast-httk/tree/main/httk
 
-# - Target compound : parent & daughter
+# - Target compound : parent 
 # - Species         : Mammals (Maternal only)
 # - Author          : Yaoxing Wu
 # - Date            : Jun, 2022
@@ -199,7 +199,7 @@ pbpk8cpt <- function(t, state, parameters) {
     dAint_parent_out      =  Clint_int_parent_invivo  * Cgut_parent / (Kgut2pu_parent * fub_parent)
     dAart_parent_out      = Clint_plasma_parent_invivo  * Vart * Cart_parent
     
-    Mass_parent_in           = Agut_parent_in + Aven_parent_in                                      # Total Amount Acibenzolar from IV Dose and Absorbed in Gut; umol/kg bw
+    Mass_parent_in           = Agut_parent_in + Aven_parent_in                                      # Total Amount from IV Dose and Absorbed in Gut; umol/kg bw
     Mass_parent_stored       = Agut_parent + Aliver_parent + Abrain_parent + Aadipose_parent +
                                   Arest_parent + Aven_parent + Alung_parent + Aart_parent           # Total Amount of Parent Remaining in the Body (??mol)
     Mass_parent_out          = Aliver_parent_out + Aven_parent_out + Aint_parent_out + Aart_parent_out           # Total Amount of Parent Excreted from the Body (??mol)
