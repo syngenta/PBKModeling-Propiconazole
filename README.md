@@ -32,6 +32,6 @@ This work represents a substantial advancement toward understanding internal dos
 
 ## Reference
 
-- Physiologically based kinetic (PBK) modeling of propiconazole using a machine learning-enhanced read-across approach for interspecies extrapolation.
+Physiologically based kinetic (PBK) modeling of propiconazole using a machine learning-enhanced read-across approach for interspecies extrapolation.
 
-- The article is available online at https://doi.org/10.1016/j.envint.2024.108804 
+The article is available online at https://doi.org/10.1016/j.envint.2024.108804 
