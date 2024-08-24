@@ -99,8 +99,9 @@ Qheart     <- subset(df_tissue , variable == "Flow (mL/min/kg^(3/4))" &
                        tolower(Tissue) == 'heart')$value /(BW^0.25)/1000*60 
 Qkidney    <- subset(df_tissue , variable == "Flow (mL/min/kg^(3/4))" & 
                        tolower(Tissue) == 'kidney')$value /(BW^0.25)/1000*60 
-Qliver     <- subset(df_tissue , variable == "Flow (mL/min/kg^(3/4))" & 
+Qtotal.liver     <- subset(df_tissue , variable == "Flow (mL/min/kg^(3/4))" & 
                        tolower(Tissue) == 'liver')$value /(BW^0.25)/1000*60 
+Qliver     <- Qtotal.liver - Qgut
 Qlung      <- subset(df_tissue , variable == "Flow (mL/min/kg^(3/4))" & 
                        tolower(Tissue) == 'lung')$value /(BW^0.25)/1000*60 
 Qmuscle    <- subset(df_tissue , variable == "Flow (mL/min/kg^(3/4))" & 
