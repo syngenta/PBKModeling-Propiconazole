@@ -65,16 +65,17 @@ Vskin      <- subset(df_tissue , variable == "Vol (L/kg)" &
                        tolower(Tissue) == 'skin')$value
 Vspleen    <- subset(df_tissue , variable == "Vol (L/kg)" & 
                        tolower(Tissue) == 'spleen')$value
-#thyroid   <- subset(df_tissue , variable == "Vol (L/kg)" & 
-#                      tolower(Tissue) == 'thyroid')$value      # human only
-#placenta                                                       # human only
+if(species == 'Human'){
+  Vthyroid   <- subset(df_tissue , variable == "Vol (L/kg)" & 
+                        tolower(Tissue) == 'thyroid')$value      # human only
+}else{Vthyroid   <- 0}
 Vrest_httk <- subset(df_tissue , variable == "Vol (L/kg)" & 
                        tolower(Tissue) == 'rest')$value
 
-Vrest      <- Vbone  + Vheart + Vskin + Vspleen + Vmuscle + Vkidney + Vrest_httk    # L/kg BW
+Vrest      <- Vbone  + Vheart + Vskin + Vspleen + Vmuscle + Vkidney + Vthyroid + Vrest_httk    # L/kg BW
 # quality check: 
 Vol        <- subset(df_tissue , variable == "Vol (L/kg)")
-Vrest+Vlung+Vgut+Vliver+Vkidney + Vbrain + Vadipose  == sum(Vol$value)
+Vrest+Vlung+Vgut+Vliver+ Vbrain + Vadipose  == sum(Vol$value)
 
 Hematocrit_fraction <- subset(df_physio, physiology.data.Parameter == 'Hematocrit')$"physiology.data...grepl.species..names.physiology.data..."
 Vplasma    <- subset(df_physio, physiology.data.Parameter == 'Plasma Volume')$"physiology.data...grepl.species..names.physiology.data..."/1000   # L/kg
